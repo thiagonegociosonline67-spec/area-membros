@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { decimal, int, mysqlEnum, mysqlTable, mediumtext, text, timestamp, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -25,4 +25,32 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-// TODO: Add your tables here
+export const nfeSequencia = mysqlTable("nfe_sequencia", {
+  id: int("id").primaryKey(),
+  serie: varchar("serie", { length: 3 }).notNull().default("1"),
+  ultimoNumero: int("ultimo_numero").notNull().default(10889),
+});
+
+export const notasFiscais = mysqlTable("notas_fiscais", {
+  id: int("id").autoincrement().primaryKey(),
+  chNFe: varchar("ch_nfe", { length: 44 }).notNull().unique(),
+  nNF: int("n_nf").notNull(),
+  userId: int("user_id"),
+  status: mysqlEnum("status", ["pendente", "autorizada", "rejeitada", "cancelada"])
+    .notNull()
+    .default("pendente"),
+  cStat: varchar("c_stat", { length: 3 }),
+  xMotivo: varchar("x_motivo", { length: 255 }),
+  nProt: varchar("n_prot", { length: 20 }),
+  valor: decimal("valor", { precision: 15, scale: 2 }).notNull(),
+  destNome: varchar("dest_nome", { length: 60 }),
+  destDoc: varchar("dest_doc", { length: 14 }),
+  destEmail: varchar("dest_email", { length: 60 }),
+  xmlNFe: mediumtext("xml_nfe"),
+  dhEmi: timestamp("dh_emi").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type NotaFiscal = typeof notasFiscais.$inferSelect;
+export type InsertNotaFiscal = typeof notasFiscais.$inferInsert;
