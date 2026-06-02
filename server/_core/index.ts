@@ -1,9 +1,13 @@
 import "dotenv/config";
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local", override: false });
 import express from "express";
 import { createServer } from "http";
 import net from "net";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { registerOAuthRoutes } from "./oauth";
+import { registerHotmartWebhook } from "../webhooks/hotmart";
+import { runNfeMigration } from "../nfe/migrate";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 
@@ -55,6 +59,10 @@ async function startServer() {
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
   registerOAuthRoutes(app);
+  registerHotmartWebhook(app);
+
+  // Cria tabelas NF-e se não existirem (roda uma vez na inicialização)
+  runNfeMigration().catch(console.error);
 
   app.get("/api/health", (_req, res) => {
     res.json({ ok: true, timestamp: Date.now() });

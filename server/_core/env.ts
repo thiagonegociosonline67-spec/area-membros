@@ -7,4 +7,12 @@ export const ENV = {
   isProduction: process.env.NODE_ENV === "production",
   forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
   forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
+  // NF-e
+  nfeCnpj: process.env.NFE_CNPJ ?? "",
+  nfeRazaoSocial: process.env.NFE_RAZAO_SOCIAL ?? "",
+  nfeCertBase64: process.env.NFE_CERT_BASE64 ?? "",
+  nfeKeyPem: process.env.NFE_KEY_PEM ?? "",
+  nfeTpAmb: process.env.NFE_TP_AMB ?? "1",
+  // Webhook
+  hotmartHottok: process.env.HOTMART_HOTTOK ?? "",
 };
