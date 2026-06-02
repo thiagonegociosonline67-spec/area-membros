@@ -24,7 +24,7 @@ export async function proximoNNF(): Promise<number> {
 export async function salvarNFe(params: {
   chNFe: string;
   nNF: number;
-  userId: number;
+  userId: number | null;
   valor: number;
   destNome: string;
   destDoc?: string;

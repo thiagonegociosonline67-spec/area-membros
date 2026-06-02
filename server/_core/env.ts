@@ -13,4 +13,6 @@ export const ENV = {
   nfeCertBase64: process.env.NFE_CERT_BASE64 ?? "",
   nfeKeyPem: process.env.NFE_KEY_PEM ?? "",
   nfeTpAmb: process.env.NFE_TP_AMB ?? "1",
+  // Webhook
+  hotmartHottok: process.env.HOTMART_HOTTOK ?? "",
 };
