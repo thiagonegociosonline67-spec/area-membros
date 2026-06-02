@@ -7,8 +7,8 @@ import { proximoNNF, salvarNFe } from "../nfe/db.js";
 import { CERT_BASE64 } from "../nfe/constants.js";
 import type { NFeDestinatario, NFeProduto } from "../nfe/types.js";
 
-// Hotmart purchase events that mean "payment confirmed"
-const PAID_EVENTS = new Set(["PURCHASE_COMPLETE", "PURCHASE_APPROVED"]);
+// Emite NF-e ao confirmar pagamento (Compra Aprovada = pagamento identificado)
+const PAID_EVENTS = new Set(["PURCHASE_APPROVED"]);
 
 interface HotmartAddress {
   address?: string;
