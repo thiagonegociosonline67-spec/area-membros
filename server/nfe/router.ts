@@ -5,7 +5,7 @@ import { buildNFeXML, buildEnviNFe } from "./xml.js";
 import { signNFe } from "./sign.js";
 import { enviarNFe } from "./sefaz.js";
 import { proximoNNF, salvarNFe, listarNFes } from "./db.js";
-import { EMIT } from "./constants.js";
+import { CERT_BASE64 } from "./constants.js";
 
 const EnderecoSchema = z.object({
   xLgr: z.string().min(1).max(60),
@@ -45,29 +45,15 @@ export const nfeRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      // Validações de configuração
-      if (!EMIT.cnpj) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "NFE_CNPJ não configurado",
-        });
-      }
-      if (!EMIT.xNome) {
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: "NFE_RAZAO_SOCIAL não configurado",
-        });
-      }
-
-      const certBase64 = process.env.NFE_CERT_BASE64;
       const privateKeyPem = process.env.NFE_KEY_PEM;
-
-      if (!certBase64 || !privateKeyPem) {
+      if (!privateKeyPem) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
-          message: "Certificado digital não configurado (NFE_CERT_BASE64 / NFE_KEY_PEM)",
+          message: "Chave privada não configurada — defina NFE_KEY_PEM no .env",
         });
       }
+
+      const certBase64 = CERT_BASE64;
 
       // Garante que pelo menos CPF ou CNPJ foi informado
       if (!input.dest.cpf && !input.dest.cnpj) {

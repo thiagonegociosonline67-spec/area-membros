@@ -9,13 +9,13 @@ function pad(v: string | number, n: number) {
 }
 
 function fmtDh(d: Date): string {
-  const yy = d.getFullYear();
+  const yyyy = d.getFullYear();
   const mm = pad(d.getMonth() + 1, 2);
   const dd = pad(d.getDate(), 2);
   const hh = pad(d.getHours(), 2);
   const mi = pad(d.getMinutes(), 2);
   const ss = pad(d.getSeconds(), 2);
-  return `${yy}-${mm}-${dd}T${hh}:${mi}:${ss}-03:00`;
+  return `${yyyy}-${mm}-${dd}T${hh}:${mi}:${ss}-03:00`;
 }
 
 function fv(n: number, dec = 2) {
@@ -25,15 +25,17 @@ function fv(n: number, dec = 2) {
 function buildIde(nNF: number, chNFe: string, dhEmi: Date): string {
   const cNF = chNFe.substring(35, 43);
   const cDV = chNFe[43];
+  const dh = fmtDh(dhEmi);
   return (
     `<ide>` +
     `<cUF>${SEFAZ.cUF}</cUF>` +
     `<cNF>${cNF}</cNF>` +
-    `<natOp>Venda</natOp>` +
+    `<natOp>${FISCAL.natOp}</natOp>` +
     `<mod>${FISCAL.mod}</mod>` +
     `<serie>${FISCAL.serie}</serie>` +
     `<nNF>${nNF}</nNF>` +
-    `<dhEmi>${fmtDh(dhEmi)}</dhEmi>` +
+    `<dhEmi>${dh}</dhEmi>` +
+    `<dhSaiEnt>${dh}</dhSaiEnt>` +
     `<tpNF>${FISCAL.tpNF}</tpNF>` +
     `<idDest>${FISCAL.idDest}</idDest>` +
     `<cMunFG>${EMIT.ender.cMun}</cMunFG>` +
@@ -44,6 +46,7 @@ function buildIde(nNF: number, chNFe: string, dhEmi: Date): string {
     `<finNFe>${FISCAL.finNFe}</finNFe>` +
     `<indFinal>${FISCAL.indFinal}</indFinal>` +
     `<indPres>${FISCAL.indPres}</indPres>` +
+    `<indIntermed>${FISCAL.indIntermed}</indIntermed>` +
     `<procEmi>${FISCAL.procEmi}</procEmi>` +
     `<verProc>${FISCAL.verProc}</verProc>` +
     `</ide>`
@@ -53,29 +56,27 @@ function buildIde(nNF: number, chNFe: string, dhEmi: Date): string {
 function buildEmit(): string {
   const e = EMIT;
   const en = e.ender;
-  let xml =
+  return (
     `<emit>` +
-    `<CNPJ>${e.cnpj.replace(/\D/g, "")}</CNPJ>` +
-    `<xNome>${e.xNome}</xNome>`;
-  if (e.xFant) xml += `<xFant>${e.xFant}</xFant>`;
-  xml +=
+    `<CNPJ>${e.cnpj}</CNPJ>` +
+    `<xNome>${e.xNome}</xNome>` +
+    `<xFant>${e.xFant}</xFant>` +
     `<enderEmit>` +
     `<xLgr>${en.xLgr}</xLgr>` +
     `<nro>${en.nro}</nro>` +
+    `<xCpl>${en.xCpl}</xCpl>` +
     `<xBairro>${en.xBairro}</xBairro>` +
     `<cMun>${en.cMun}</cMun>` +
     `<xMun>${en.xMun}</xMun>` +
     `<UF>${en.uf}</UF>` +
-    `<CEP>${en.cep.replace(/\D/g, "")}</CEP>` +
+    `<CEP>${en.cep}</CEP>` +
     `<cPais>${en.cPais}</cPais>` +
-    `<xPais>${en.xPais}</xPais>`;
-  if (en.fone) xml += `<fone>${en.fone.replace(/\D/g, "")}</fone>`;
-  xml +=
+    `<xPais>${en.xPais}</xPais>` +
     `</enderEmit>` +
     `<IE>${e.ie}</IE>` +
     `<CRT>${e.crt}</CRT>` +
-    `</emit>`;
-  return xml;
+    `</emit>`
+  );
 }
 
 function buildDest(dest: NFeDestinatario): string {
@@ -109,10 +110,11 @@ function buildDet(produto: NFeProduto): string {
   const vProd = fv(produto.vUnCom * qCom);
   const vUnComStr = fv(produto.vUnCom, 10);
   const qComStr = fv(qCom, 4);
+  const vTotTrib = fv(produto.vUnCom * qCom * FISCAL.ibptRate);
   return (
     `<det nItem="1">` +
     `<prod>` +
-    `<cProd>01</cProd>` +
+    `<cProd>${FISCAL.cProd}</cProd>` +
     `<cEAN>SEM GTIN</cEAN>` +
     `<xProd>${produto.xProd}</xProd>` +
     `<NCM>${FISCAL.ncm}</NCM>` +
@@ -128,6 +130,7 @@ function buildDet(produto: NFeProduto): string {
     `<indTot>1</indTot>` +
     `</prod>` +
     `<imposto>` +
+    `<vTotTrib>${vTotTrib}</vTotTrib>` +
     `<ICMS><ICMS40><orig>0</orig><CST>${FISCAL.cstIcms}</CST></ICMS40></ICMS>` +
     `<PIS><PISNT><CST>${FISCAL.cstPisCofins}</CST></PISNT></PIS>` +
     `<COFINS><COFINSNT><CST>${FISCAL.cstPisCofins}</CST></COFINSNT></COFINS>` +
@@ -138,15 +141,31 @@ function buildDet(produto: NFeProduto): string {
 
 function buildTotal(vNF: number): string {
   const v = fv(vNF);
+  const vTotTrib = fv(vNF * FISCAL.ibptRate);
   return (
     `<total><ICMSTot>` +
-    `<vBC>0.00</vBC><vICMS>0.00</vICMS><vICMSDeson>0.00</vICMSDeson>` +
-    `<vFCP>0.00</vFCP><vBCST>0.00</vBCST><vST>0.00</vST>` +
-    `<vFCPST>0.00</vFCPST><vFCPSTRet>0.00</vFCPSTRet>` +
-    `<vProd>${v}</vProd><vFrete>0.00</vFrete><vSeg>0.00</vSeg>` +
-    `<vDesc>0.00</vDesc><vII>0.00</vII><vIPI>0.00</vIPI>` +
-    `<vIPIDevol>0.00</vIPIDevol><vPIS>0.00</vPIS><vCOFINS>0.00</vCOFINS>` +
-    `<vOutro>0.00</vOutro><vNF>${v}</vNF>` +
+    `<vBC>0.00</vBC>` +
+    `<vICMS>0.00</vICMS>` +
+    `<vICMSDeson>0.00</vICMSDeson>` +
+    `<vFCPUFDest>0.00</vFCPUFDest>` +
+    `<vICMSUFDest>0.00</vICMSUFDest>` +
+    `<vFCP>0.00</vFCP>` +
+    `<vBCST>0.00</vBCST>` +
+    `<vST>0.00</vST>` +
+    `<vFCPST>0.00</vFCPST>` +
+    `<vFCPSTRet>0.00</vFCPSTRet>` +
+    `<vProd>${v}</vProd>` +
+    `<vFrete>0.00</vFrete>` +
+    `<vSeg>0.00</vSeg>` +
+    `<vDesc>0.00</vDesc>` +
+    `<vII>0.00</vII>` +
+    `<vIPI>0.00</vIPI>` +
+    `<vIPIDevol>0.00</vIPIDevol>` +
+    `<vPIS>0.00</vPIS>` +
+    `<vCOFINS>0.00</vCOFINS>` +
+    `<vOutro>0.00</vOutro>` +
+    `<vNF>${v}</vNF>` +
+    `<vTotTrib>${vTotTrib}</vTotTrib>` +
     `</ICMSTot></total>`
   );
 }
@@ -176,16 +195,16 @@ export function buildNFeXML(params: {
     buildDet(params.produto) +
     buildTotal(vNF) +
     `<transp><modFrete>${FISCAL.modFrete}</modFrete></transp>` +
-    `<pag><detPag><tPag>${FISCAL.tPag}</tPag><vPag>${fv(params.vPag)}</vPag></detPag></pag>` +
+    `<pag><detPag><tPag>${FISCAL.tPag}</tPag><xPag>${FISCAL.xPag}</xPag><vPag>${fv(params.vPag)}</vPag></detPag></pag>` +
     `<infAdic><infCpl>${FISCAL.infCpl}</infCpl></infAdic>`;
 
-  // infNFe com xmlns explícito — usado como entrada do digest SHA-1 (C14N subset)
+  // infNFe com xmlns explícito para digest SHA-1 (C14N subset inclui namespace herdado)
   const infNFeXml =
     `<infNFe xmlns="${NS}" Id="NFe${chNFe}" versao="4.00">` +
     body +
     `</infNFe>`;
 
-  // NFe completa para envio: xmlns no elemento raiz, infNFe sem repetir
+  // NFe completa: xmlns no elemento raiz
   const nfeXml =
     `<NFe xmlns="${NS}">` +
     `<infNFe Id="NFe${chNFe}" versao="4.00">` +
