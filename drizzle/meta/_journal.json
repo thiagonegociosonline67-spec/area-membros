@@ -9,5 +9,12 @@
       "tag": "0000_elite_eternals",
       "breakpoints": true
     }
+    ,{
+      "idx": 1,
+      "version": "5",
+      "when": 1748869200000,
+      "tag": "0001_nfe_tables",
+      "breakpoints": true
+    }
   ]
 }

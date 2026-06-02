@@ -5,33 +5,34 @@ import { buildNFeXML, buildEnviNFe } from "./xml.js";
 import { signNFe } from "./sign.js";
 import { enviarNFe } from "./sefaz.js";
 import { proximoNNF, salvarNFe, listarNFes } from "./db.js";
+import { EMIT } from "./constants.js";
 
 const EnderecoSchema = z.object({
-  xLgr: z.string(),
-  nro: z.string(),
-  xCpl: z.string().optional(),
-  xBairro: z.string(),
-  cMun: z.string(),
-  xMun: z.string(),
+  xLgr: z.string().min(1).max(60),
+  nro: z.string().min(1).max(60),
+  xCpl: z.string().max(60).optional(),
+  xBairro: z.string().min(1).max(60),
+  cMun: z.string().length(7),
+  xMun: z.string().min(1).max(60),
   uf: z.string().length(2),
-  cep: z.string(),
+  cep: z.string().regex(/^\d{8}$/, "CEP deve ter 8 dígitos"),
   cPais: z.string().optional(),
   xPais: z.string().optional(),
 });
 
 const DestinatarioSchema = z.object({
-  cpf: z.string().optional(),
-  cnpj: z.string().optional(),
-  xNome: z.string().max(60),
-  email: z.string().email().optional(),
-  indIEDest: z.enum(["1", "2", "9"]),
+  cpf: z.string().regex(/^\d{11}$/).optional(),
+  cnpj: z.string().regex(/^\d{14}$/).optional(),
+  xNome: z.string().min(1).max(60),
+  email: z.string().email().max(60).optional(),
+  indIEDest: z.enum(["1", "2", "9"]).default("9"),
   enderDest: EnderecoSchema,
 });
 
 const ProdutoSchema = z.object({
-  xProd: z.string().max(120),
+  xProd: z.string().min(1).max(120),
   vUnCom: z.number().positive(),
-  qCom: z.number().positive().optional(),
+  qCom: z.number().positive().default(1),
 });
 
 export const nfeRouter = router({
@@ -44,6 +45,20 @@ export const nfeRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      // Validações de configuração
+      if (!EMIT.cnpj) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "NFE_CNPJ não configurado",
+        });
+      }
+      if (!EMIT.xNome) {
+        throw new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "NFE_RAZAO_SOCIAL não configurado",
+        });
+      }
+
       const certBase64 = process.env.NFE_CERT_BASE64;
       const privateKeyPem = process.env.NFE_KEY_PEM;
 
@@ -51,6 +66,14 @@ export const nfeRouter = router({
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
           message: "Certificado digital não configurado (NFE_CERT_BASE64 / NFE_KEY_PEM)",
+        });
+      }
+
+      // Garante que pelo menos CPF ou CNPJ foi informado
+      if (!input.dest.cpf && !input.dest.cnpj) {
+        throw new TRPCError({
+          code: "BAD_REQUEST",
+          message: "Informe CPF ou CNPJ do destinatário",
         });
       }
 

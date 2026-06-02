@@ -1,21 +1,24 @@
 import { getDb } from "../db.js";
 import { notasFiscais, nfeSequencia } from "../../drizzle/schema.js";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { SefazRetorno } from "./types.js";
 
 export async function proximoNNF(): Promise<number> {
   const db = await getDb();
   if (!db) throw new Error("Banco de dados indisponível");
 
-  // Incremento atômico + leitura em duas queries dentro da mesma conexão
-  await db.execute(
-    "UPDATE nfe_sequencia SET ultimo_numero = ultimo_numero + 1 WHERE id = 1",
-  );
-  const [rows] = await db.execute(
-    "SELECT ultimo_numero FROM nfe_sequencia WHERE id = 1",
-  );
-  const row = (rows as unknown as Array<{ ultimo_numero: number }>)[0];
-  return row.ultimo_numero;
+  await db
+    .update(nfeSequencia)
+    .set({ ultimoNumero: sql`${nfeSequencia.ultimoNumero} + 1` })
+    .where(eq(nfeSequencia.id, 1));
+
+  const [seq] = await db
+    .select({ n: nfeSequencia.ultimoNumero })
+    .from(nfeSequencia)
+    .where(eq(nfeSequencia.id, 1));
+
+  if (!seq) throw new Error("Sequência NF-e não encontrada. Execute a migration 0001_nfe_tables.sql");
+  return seq.n;
 }
 
 export async function salvarNFe(params: {
@@ -58,8 +61,5 @@ export async function salvarNFe(params: {
 export async function listarNFes() {
   const db = await getDb();
   if (!db) return [];
-  return db
-    .select()
-    .from(notasFiscais)
-    .orderBy(notasFiscais.createdAt);
+  return db.select().from(notasFiscais).orderBy(notasFiscais.createdAt);
 }

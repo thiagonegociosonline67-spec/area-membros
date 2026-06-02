@@ -28,6 +28,7 @@ function extract(xml: string, tag: string): string {
 }
 
 function parseRetorno(xml: string): SefazRetorno {
+  // Resposta síncrona (indSinc=1): retEnviNFe contém protNFe > infProt
   const infProt = extract(xml, "infProt");
   if (infProt) {
     return {
@@ -41,12 +42,15 @@ function parseRetorno(xml: string): SefazRetorno {
       digVal: extract(infProt, "digVal"),
     };
   }
+  // Resposta de lote ou erro
+  const retEnviNFe = extract(xml, "retEnviNFe");
+  const base = retEnviNFe || xml;
   return {
-    tpAmb: extract(xml, "tpAmb"),
-    cStat: extract(xml, "cStat"),
-    xMotivo: extract(xml, "xMotivo"),
-    cUF: extract(xml, "cUF"),
-    dhRecbto: extract(xml, "dhRecbto"),
+    tpAmb: extract(base, "tpAmb"),
+    cStat: extract(base, "cStat"),
+    xMotivo: extract(base, "xMotivo"),
+    cUF: extract(base, "cUF"),
+    dhRecbto: extract(base, "dhRecbto"),
   };
 }
 
@@ -62,6 +66,7 @@ export async function enviarNFe(enviNFeXml: string): Promise<{
     },
     httpsAgent,
     timeout: 30000,
+    responseType: "text",
   });
 
   const rawXml = String(response.data);
